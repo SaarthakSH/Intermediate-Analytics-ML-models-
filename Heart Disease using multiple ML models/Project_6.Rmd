@@ -1,0 +1,350 @@
+---
+title: ""
+output: html_document
+---
+
+```{r libraries, message=FALSE, warning=FALSE}
+
+# List of libraries that are used in this data set 
+library(readxl)
+library(knitr)
+library(dplyr)
+library(kableExtra)
+library(RColorBrewer)
+library(tidyverse)
+library(psych)
+library(ggplot2)
+library(dlookr)
+library(caret)
+library(DT)
+library(pROC)
+library(glmnet)
+library(Metrics)
+library(car)
+library(MASS)
+library(corrplot)
+
+# Location of the data set that is used 
+Group4_DS = read_csv("DataSet/Group 4 heart issues.csv")
+
+#Dataset with 15000 entries used for ridge and lasso analysis
+AVM4GrpData = heart_2020_cleaned <- read_csv("DataSet/heart_2020_cleaned.csv")
+
+```
+
+
+
+```{r First Task}
+
+#Performing Exploratory and basic descriptive analysis on the data set
+
+head(Group4_DS)
+
+psych::describe(Group4_DS)
+
+```
+
+
+
+```{r Second Task}
+
+par(mfrow=c(1,2), mai = c(0.6, 1.0, 0.4, 0.4))
+
+pie(table(Group4_DS$AlcoholDrinking),
+    radius = 0.9,
+    col = brewer.pal(8, "Set1"),
+    main = "Piechart for Alcohol Drinkers")
+
+pie(table(Group4_DS$HeartDisease),
+    radius = 0.9,
+    col = brewer.pal(8, "Set2"),
+    main = "Piechart for Heart Disease")
+
+```
+
+
+
+```{r Logistic Regression Model}
+
+#Setting up seed so values don't change after running it each time.
+set.seed(420)
+
+#Converting Heartdisease column from character to factor as only factor works for glm function. 
+Group4_DS$HeartDisease = as.factor(Group4_DS$HeartDisease)
+
+#Splitting the data in train and test set using caret library and createDataPartition function.
+trainIndex = createDataPartition(Group4_DS$Smoking, p = 0.7, list = FALSE)
+
+#The trainIndex is getting randomly split into train_DS with 70% and the remaining 30% random split is going in test_DS.
+train_DS = Group4_DS[trainIndex,]
+test_DS = Group4_DS[-trainIndex,]
+
+#Using the glm() function to fit a logistic regression model to the training set using at least two predictors for train data.
+model = glm(train_DS$HeartDisease ~ train_DS$BMI + train_DS$SleepTime, 
+            data = train_DS,
+            family = binomial(link = "logit"))
+
+summary(model)
+
+```
+
+
+
+```{r Train set prediction}
+
+#Train set prediction
+#Making prediction on the train data
+probabilities.train = predict(model, newdata = train_DS, type = "response")
+predicted.class.min = as.factor(ifelse(probabilities.train >= 0.2, "Yes", "No"))
+
+#Creating a confusionmatrix to compare the predicted values with the actual values.
+confusionMatrix(predicted.class.min, train_DS$HeartDisease, positive = "Yes")
+
+#Then, using the train data set, predictions are created by comparing predicted values to actual values using a confusion matrix. The number of false positives in this case is 143. When we anticipate yes but the actual response is no, we call it a false positive. The number of false negatives in this case is 19224. When we forecast no, but the actual answer is yes, we have a false negative. The true positive number is 14, whereas the true negative number is 204476. This model has a accuracy of 0.9135. To improve our model, we can reduce the sensitivity or modify the probability value from 0.2 to something lower. Our prevalence value is 8.594e-02, which implies that if we take 100 values, our model will predict 8.6 or 9 of them to be yes and the remaining 91 to be no. False Negative or False Positive both are damaging but that depends on our model and question that is being answered. In some case, False Negative can be more damaging than False Positive or vice versa.
+
+```
+
+
+
+```{r Test set prediction}
+
+#Test set prediction
+#Making prediction on the test data
+model = glm(test_DS$HeartDisease ~ test_DS$BMI + test_DS$SleepTime, 
+            data = test_DS,
+            family = binomial(link = "logit"))
+
+summary(model)
+
+probabilities.test = predict(model, newdata = test_DS, type = "response")
+predicted.class.min = as.factor(ifelse(probabilities.test >= 0.2, "Yes", "No"))
+
+#Creating a confusionmatrix to compare the predicted values with the actual values.
+confusionMatrix(predicted.class.min, test_DS$HeartDisease, positive = "Yes")
+#Then, using the test data set, predictions are created by comparing predicted values to actual values using a confusion matrix. The number of false positives in this case is 57. When we anticipate yes but the actual response is no, we call it a false positive. The number of false negatives in this case is 8125. When we forecast no, but the actual answer is yes, we have a false negative. The true positive number is 10, whereas the true negative number is 87746. This model has a accuracy of 0.9147 . To improve our model, we can reduce the sensitivity or modify the probability value from 0.2 to something lower or higher. Our prevalence value is 0.0847943 , which implies that if we take 100 values, our model will predict 8.4 or 8 of them to be yes and the remaining 92 to be no. False Negative or False Positive both are damaging but that depends on our model and question that is being answered. In some case, False Negative can be more damaging than False Positive or vice versa.
+
+```
+
+
+
+```{r ROC test}
+
+ROC = roc(test_DS$HeartDisease, probabilities.test )
+
+#Using the par function to remove the padding from our ROC curve. We use pty which is the plot type to s which is the square to remove the padding.
+par(pty = "s")
+
+plot(ROC,
+     col = "Purple",
+     ylab = "Sensitivity - TP Rate",
+     xlab = "Specificity - FP Rate",
+     lwd = 3)
+#Ideally we want the purple line to go straight to the top and then right horizontally. That is a model that is capable of perfect predictions but it never happens. But what we do not want is this purple line hugging the gray diagonal line. Because that will be the model that will make no correct predictions 
+#The diagonal line shows where the TP Rate is the same as the FP Rate.
+#So the ROC curve is a pretty good way to understand how your model is performing over specified thresholds. 
+
+```
+
+
+
+```{r message=FALSE, warning=FALSE}
+
+#Spliting the data into a train and test set.
+set.seed(123) 
+train_index = createDataPartition(AVM4GrpData$HeartDisease, p = 0.6, list = FALSE) 
+sample_train = AVM4GrpData[ train_index,] 
+sample_test = AVM4GrpData[-train_index,] 
+
+sample_train_x = model.matrix(sample_train$BMI~.,sample_train )[,-1]
+sample_test_x = model.matrix(sample_test$BMI~.,sample_test )[,-1]
+
+sample_train_y = sample_train$BMI
+sample_test_y = sample_test$BMI
+
+```
+
+
+
+```{r}
+#RIDGE REGRESSION
+#finding best lambda using cross validation process
+set.seed(123)
+cv.ridge = cv.glmnet(sample_train_x, sample_train_y, nfolds=10 )
+
+#Fitting the regression model into the training dataset using lambda.min
+ridge_model.min = glmnet(sample_train_x, sample_train_y, alpha=0, lambda=cv.ridge$lambda.min)
+ridge_model.min
+
+#Regression coefficients
+coef(ridge_model.min)
+
+#Fitting the regression model into the training dataset using lambda.1se
+ridge_model.1se = glmnet(sample_train_x, sample_train_y, alpha=0, lambda=cv.ridge$lambda.1se)
+ridge_model.1se
+
+#Regression coefficients
+coef(ridge_model.1se)
+
+#making predictions on training data set
+ridge_pred_train = predict(ridge_model.1se, newx=sample_train_x)
+ridge_train_rmse = rmse(sample_train_y, ridge_pred_train)
+ridge_train_rmse
+
+#making predictions on testing data set
+ridge_pred_test = predict(ridge_model.1se, newx=sample_test_x)
+ridge_test_rmse = rmse(sample_test_y, ridge_pred_test)
+ridge_test_rmse
+```
+
+
+
+```{r}
+#LASSO REGRESSION
+#finding best lambda using cross validation process
+set.seed(123)
+cv.lasso<- cv.glmnet(sample_train_x, sample_train_y, nfolds=10 )
+
+#Fitting the regression model into the training dataset using lambda.min
+lasso_model.min = glmnet(sample_train_x, sample_train_y, alpha=1, lambda=cv.lasso$lambda.min)
+lasso_model.min
+
+#Regression coefficients
+coef(lasso_model.min)
+
+#Fitting the regression model into the training dataset using lambda.1se
+lasso_model.1se = glmnet(sample_train_x, sample_train_y, alpha=1, lambda=cv.lasso$lambda.1se)
+lasso_model.1se
+
+#Regression coefficients
+coef(lasso_model.1se)
+
+#making predictions on training data set
+lasso_pred_train = predict(lasso_model.1se, newx=sample_train_x)
+lasso_train_rmse = rmse(sample_train_y, lasso_pred_train)
+lasso_train_rmse
+
+#making predictions on testing data set
+lasso_pred_test = predict(lasso_model.1se, newx=sample_test_x)
+lasso_test_rmse = rmse(sample_test_y, lasso_pred_test)
+lasso_test_rmse
+
+
+```
+
+
+
+```{r echo=TRUE, warning=FALSE}
+
+# Remove null  & NA values
+Group4_DS <- na.omit(Group4_DS)
+
+#Removing the categorical values using unlist
+
+PHA1U1= cor(Group4_DS[, unlist(lapply(Group4_DS, is.numeric))])
+PHA1U2 = round(PHA1U1, 3)
+
+DT::datatable(PHA1U2, class = 'cell-border stripe', caption = "Correlation coefficients value for the numerical values")
+
+
+corrplot(PHA1U2,
+         type = 'upper',
+         col = brewer.pal(7, "Set2"))
+
+PHA119 = as.data.frame(PHA1U1)
+
+#Finding out the regression line
+
+RLPH1 = lm(PHA119$BMI ~ PHA119$`SleepTime`)
+RLPH2 = lm(PHA119$BMI ~ PHA119$`PhysicalHealth`)
+RLPH3 = lm(PHA119$BMI ~ PHA119$`MentalHealth`)
+
+#First scatter plot
+  
+plot(PHA119$BMI ~ PHA119$`SleepTime`,
+     las = 1,
+     pch = 04,
+     col = "#FF00CC",
+     ylab= "SalesPrice",
+     xlab= "Overall Qual",
+     main= "Scatter plot of BMI vs Sleep Time")
+
+abline(RLPH1,
+       col = "Red")
+
+#Second scatter plot
+
+plot(PHA119$BMI ~ PHA119$`PhysicalHealth`,
+     las = 1,
+     pch = 04,
+     col = "#DA2D66",
+     ylab= "SalesPrice",
+     xlab= "Enclosed Porch",
+     main= "Scatter plot of BMI vs Physical Health")
+
+abline(RLPH2,
+       col = "Red")
+
+#Third scatter plot
+
+plot(PHA119$BMI ~ PHA119$`MentalHealth`,
+     las = 1,
+     pch = 04,
+     col = "#9916B3",
+     ylab= "SalesPrice",
+     xlab= "TotRms AbvGrd",
+     main= "Scatter plot of BMI vs Mental Health")
+
+abline(RLPH3,
+       col = "Red")
+
+MR19 = lm(Group4_DS$BMI ~ Group4_DS$PhysicalHealth + Group4_DS$MentalHealth + Group4_DS$SleepTime)
+
+summary_Reg19 = summary(MR19)
+summary_Reg19
+
+
+a1 = summary_Reg19$coefficients[1]
+b1 = summary_Reg19$coefficients[2]
+b2 = summary_Reg19$coefficients[3]
+b3 = summary_Reg19$coefficients[4]
+
+#Multiple regression formula - 
+
+print(paste("Multiple regression formula, y =", round(a1, 3), "+", round(b1, 3), "x1", "+", round(b2, 3), "x2", "+", round(b3, 3), "x3"))
+
+Group4_DS$`PhysicalHealth`[is.na(Group4_DS$`PhysicalHealth`)] = mean(Group4_DS$`PhysicalHealth`, na.rm = TRUE)
+
+Group4_DS$`MentalHealth`[is.na(Group4_DS$`MentalHealth`)] = mean(Group4_DS$`MentalHealth`, na.rm = TRUE)
+
+Group4_DS$`SleepTime`[is.na(Group4_DS$`SleepTime`)] = mean(Group4_DS$`SleepTime`, na.rm = TRUE)
+
+#Correlation and determination values for each of the dependent and independent values. 
+
+cor191 = cor(Group4_DS$BMI,Group4_DS$`PhysicalHealth`)
+cor192 = cor(Group4_DS$BMI,Group4_DS$`MentalHealth`)
+cor193 = cor(Group4_DS$BMI,Group4_DS$`SleepTime`)
+
+det1 = cor191 ^ 2 
+det2 = cor192 ^ 2 
+det3 = cor193 ^ 2 
+
+table_cd = c(cor191, cor192, cor193, det1, det2, det3)
+matrix_cd = matrix(table_cd, ncol = 2, byrow = FALSE)
+
+rownames(matrix_cd) = c("BMI & Physical Health", "BMI & Mental Health", "BMI & Sleep Time")
+colnames(matrix_cd) = c("Correlation Coefficient", "Determination Coefficient")
+
+DT::datatable(matrix_cd, class = 'cell-border stripe', caption = "Correlation & Determination Coefficient values") %>% 
+  formatRound("Correlation Coefficient", 2) %>% 
+  formatRound("Determination Coefficient", 2)
+
+
+par(mfrow = c(2,2))
+
+plot(MR19)
+
+#Checking for multicollinearity
+
+vif(MR19)
+
+```

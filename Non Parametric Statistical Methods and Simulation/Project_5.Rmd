@@ -1,0 +1,240 @@
+---
+title: ""
+output: html_document
+---
+
+```{r libraries, message=FALSE, warning=FALSE}
+
+#Libraries used
+library(BSDA)
+library(stats)
+
+```
+
+
+```{r First Task Part One}
+
+#Ho => Median = 3000
+#Ha => Median != 3000
+alpha = 0.05
+median = 3000
+sample = c(6210, 3150, 2700, 3012, 4875, 3540, 6127, 2581, 2642, 2573, 2792, 2800, 2500, 3700, 6030, 5437, 2758, 3490, 2851, 2720)
+
+critical_value = qbinom(size = 20, prob = 0.5, p = 0.05) - 1
+testvalue = 10
+
+result = SIGN.test(sample, median = 3000)
+result
+
+ifelse(result$p.value < alpha, "Reject the null hypothesis", "Fail to reject the null hypothesis")
+
+ifelse(testvalue > critical_value, "Reject the null hypothesis", "Fail to reject the null hypothesis")
+
+```
+
+
+```{r First Task Part Two}
+
+#Ho => Median = 200
+#Ha => Median < 200
+n = 40
+alpha = 0.05
+x = 15
+
+#From table 
+critical_value = -1.6844
+
+z = ((x + 0.5) - 0.5 * n)/((sqrt(n))/2)
+z
+
+ifelse(z > critical_value, "Fail to reject null hypothesis", "Reject null hypothesis")
+
+```
+
+
+```{r Second Task Part One}
+
+#Ho => There is no difference in the sentence received by each gender
+#H1 => There is difference in the sentence received by each gender
+alpha = 0.05
+Males = c(8, 12, 6, 14, 22, 27, 32, 24, 26, 19, 15, 13)
+Females = c(7, 5, 2, 3, 21, 26, 30, 9, 4, 17, 23, 12, 11, 16)
+cv = qnorm(0.975)
+
+result = wilcox.test(x = Males, y = Females, alternative = "two.sided", correct = FALSE)
+result
+
+ifelse(result$p.value < alpha, "Reject the null hypothesis", "Fail to reject null hypothesis")
+
+```
+
+
+```{r Second Task Part Two}
+
+#Ho => There is difference in number of wins.
+#H1 => There is no difference in number of wins.
+alpha = 0.05
+NL = c(89, 96, 88, 101, 90, 91, 92, 96, 108, 100, 95)
+AL = c(108, 86, 91, 97, 100, 102, 95, 104, 95, 89, 88, 101)
+cv = qnorm(0.975)
+
+result = wilcox.test(x = NL, y = AL, alternative = "two.sided", correct = FALSE)
+result
+
+ifelse(result$p.value < alpha, "Reject the null hypothesis", "Fail to reject null hypothesis")
+
+```
+
+
+```{r Third Task Part One}
+
+#First Test
+ws = 13 
+n = 15
+alpha = 0.01
+
+#Two tail test
+criticalvalue = qsignrank(alpha/2, n) 
+
+ifelse(ws > criticalvalue, "Fail to reject null hypothesis", "Reject the null hypothesis")
+
+```
+
+
+```{r Third Task Part Two}
+
+#Second Test
+ws = 32 
+n = 28
+alpha = 0.025
+
+#One tail test
+criticalvalue = qsignrank(alpha, n) - 1 
+
+ifelse(ws > criticalvalue, "Fail to reject null hypothesis", "Reject the null hypothesis")
+
+```
+
+
+```{r Third Task Part Three}
+
+#Third Task
+ws = 65 
+n = 20
+alpha = 0.05
+
+#One tail test
+criticalvalue = qsignrank(alpha, n) - 1 
+
+ifelse(ws > criticalvalue, "Fail to reject null hypothesis", "Reject the null hypothesis")
+
+```
+
+
+```{r Third Task Part Four}
+
+#Fourth Task
+ws = 22 
+n = 14
+alpha = 0.10
+
+#Two tail test
+criticalvalue = qsignrank(alpha/2, n) 
+
+ifelse(ws > criticalvalue, "Fail to reject null hypothesis", "Reject the null hypothesis")
+
+```
+
+
+```{r Fourth Task}
+
+#Ho => There is no difference in the mean of math's score between three regions
+#H1 => There is a difference in the mean of math's score between three regions
+alpha = 0.05
+
+qchisq(alpha, 2, lower.tail = FALSE)
+
+groupA = data.frame(scores = c(527, 406, 474, 381, 411), group = rep("groupA", 5))
+groupB = data.frame(scores = c(520, 510, 513, 548, 496), group = rep("groupB", 5))
+groupC = data.frame(scores = c(523, 547, 547, 391, 549), group = rep("groupC", 5))
+
+data = rbind(groupA, groupB, groupC)
+
+result = kruskal.test(scores ~ group, data = data)
+result 
+
+ifelse(result$p.value < alpha, "Reject the null hypothesis", "Fail to reject null hypothesis")
+
+```
+
+
+```{r Fifth Task}
+
+#Ho => There is no relationship between the subway and rail commuter passengers
+#H1 => There is a relationship between the subway and rail commuter passengers
+alpha = 0.05
+city = c(1, 2, 3, 4, 5, 6)
+subway = c(845, 494, 425, 313, 108, 41)
+rail = c(39, 291, 142, 103, 33, 38)
+
+#From Table L
+criticalvalue = 0.886
+
+data = data.frame(city = city, subway = subway, rail = rail)
+
+result = cor.test(x = data$subway, y = data$rail, method = "spearman")
+result
+
+ifelse(result$p.value < alpha, "Reject the null hypothesis", "Fail to reject null hypothesis")
+
+```
+
+
+```{r Sixth Task Part One}
+
+trials = 40
+prizes = 4
+box = c()
+
+for (i in 1:trials) 
+  {
+  a = sample(prizes, 100, replace = TRUE)
+  prob1 = match(1,a)
+  prob2 = match(2,a)
+  prob3 = match(3,a)
+  prob4 = match(4,a)
+  boxnum = max(prob1, prob2, prob3, prob4)
+  box = c(box, boxnum)
+  }
+
+average_box = mean(box)
+average_box
+
+```
+
+
+```{r Sixth Task Part Two}
+
+trials = 30
+alpha = c("b", "i", "g")
+tickets = c()
+prob1 = 0.6
+prob2 = 0.3
+prob3 = 0.1
+for (i in 1:trials) 
+  {
+  x = sample(alpha, 300, replace = TRUE, prob = c(prob1, prob2, prob3))
+  prob4 = match("b", x)
+  prob5 = match("i", x)
+  prob6 = match("g", x)
+  ticketnum = max(prob4, prob5, prob6)
+  tickets = c(tickets, ticketnum)
+  }
+
+average_ticket = mean(tickets)
+average_ticket
+
+```
+
+
+

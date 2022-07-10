@@ -1,0 +1,369 @@
+---
+title: "Untitled"
+output: html_document
+---
+
+```{r libraries, message=FALSE, warning=FALSE}
+
+library(psych)
+library(readxl)
+library(tidyverse)
+library(dplyr)
+library(RColorBrewer)
+library(knitr)
+library(ggplot2)
+library(DT)
+library(corrplot)
+library(dlookr)
+library(car)
+library(leaps)
+
+```
+
+```{r First Task Part One}
+
+#Ho = Blood type distribution same as the distribution of general population.
+#Ha = Blood type distribution differs from the distribution of general population.
+
+alpha = 0.10
+observed = c(12, 8, 24, 6)
+p = c(0.20, 0.28, 0.36, 0.16)
+cv = qchisq(0.90, df = 3)
+
+result = chisq.test(x = observed, p = p)
+result
+ifelse(result$p.value > alpha, "Fail to reject Ho", "Reject Ho")
+
+```
+
+
+```{r First Task Second Part}
+
+#Ho = Results are same as gov statistics 
+#Ha = Results are different from gov statistics 
+
+alpha = 0.05
+observed = c(125, 40, 10, 25)
+
+p = c(0.708, 0.082, 0.09, 0.12)
+cv = qchisq(0.95, df = 3)
+
+result = chisq.test(x = observed, p = p)
+result
+ifelse(result$p.value > alpha, "Fail to reject Ho", "Reject Ho")
+
+```
+
+
+```{r Second Task Part One}
+
+#Ho = Movie attendance by the year was independent upon ethnicity
+#Ha = Movie attendance by the year was dependent upon ethnicity
+
+alpha = 0.05
+r1 = c(724, 335, 174, 107)
+r2 = c(370, 292, 152, 140)
+
+mtrx = matrix(c(r1, r2), nrow = 2, byro = TRUE)
+rownames(mtrx) = c("2013", "2014")
+colnames(mtrx) = c("Caucasian", "Hispanic", "African American", "Other")
+
+result = chisq.test(mtrx)
+result
+ifelse(result$p.value > alpha, "Fail to reject Ho", "Reject Ho")
+
+```
+
+
+```{r Second Task Part Two}
+
+#Ho = There is no relationship between rank and branch of Armed forces.
+#Ha = There is a relationship between rank and branch of Armed forces. 
+
+alpha = 0.05
+r1 = c(10791, 7816, 932, 11819)
+r2 = c(62491, 42750, 9525, 54344)
+
+mtrx = matrix(c(r1, r2), ncol = 2, byrow = FALSE)
+rownames(mtrx) = c("Army", "Navy", "Marine Corps", "Air Force")
+colnames(mtrx) = c("Officers", "Enlisted")
+
+result = chisq.test(mtrx)
+result
+ifelse(result$p.value > alpha, "Fail to reject Ho", "Reject Ho")
+
+```
+
+
+```{r Third Task}
+
+#Ho = The three foods are equal and there is no difference between them. 
+#Ha = The three foods are not equal and there is difference between them. 
+
+condiments = c(270, 130, 230, 180, 80, 70, 200)
+cereals = c(260, 220, 290, 290, 200, 320, 140)
+desserts = c(100, 180, 250, 250, 300, 360, 300, 160)
+
+mean_condiments = mean(condiments)
+mean_cereals = mean(cereals)
+mean_desserts = mean(desserts)
+
+var_condiments = var(condiments)
+var_cereals = var(cereals)
+var_desserts = var(desserts)
+
+alpha = 0.05
+dfN = 2
+dfD = 19
+
+cv = qf(0.95, dfN, dfD)
+
+#Finding the grand mean
+
+gmean = sum(condiments, cereals, desserts)/22
+
+#Finding between the group variance
+
+Sb = ((7 * ((mean_condiments - gmean) ^ 2)) + (7 * ((mean_cereals - gmean) ^ 2)) + (8 * ((mean_desserts - gmean) ^ 2))) / 2
+
+#Finding the within group variance 
+
+Sw = ((6 * var_condiments) + (6 * var_cereals) + (7 * var_desserts)) / 19
+
+#Finding the F test value 
+
+Ftest_Val = Sb / Sw
+Ftest_Val
+ifelse(Ftest_Val > cv, "Reject Ho", "Fail to reject Ho")
+
+```
+
+```{r Fourth Task Part One}
+
+#Ho = all the means are equal
+#Ha = all means are not equal(i.e, At least one of the the means is different from other)
+
+cereals = c(578, 320, 264, 249, 237)
+chocolate_candy = c(311, 106, 109, 125, 173)
+coffee = c(261, 185, 302, 689)
+
+mean_cereals = mean(cereals)
+mean_chocolate_candy = mean(chocolate_candy)
+mean_coffee = mean(coffee)
+
+var_cereals = var(cereals)
+var_chocolate_candy = var(chocolate_candy)
+var_coffee = var(coffee)
+
+alpha = 0.01
+dfN = 2
+dfD = 11
+
+cv = qf(0.99, dfN, dfD)
+
+#Finding the grand mean
+
+gmean = sum(cereals, chocolate_candy, coffee)/14
+
+#Finding between the group variance
+
+Sb = ((5 * ((mean_cereals - gmean) ^ 2)) + (5 * ((mean_chocolate_candy - gmean) ^ 2)) + (4 * ((mean_coffee - gmean) ^ 2))) / 2
+
+#Finding the within group variance 
+
+Sw = ((4 * var_cereals) + (4 * var_chocolate_candy) + (3 * var_coffee)) / 11
+
+#Finding the F test value 
+
+Ftest_Val = Sb / Sw
+Ftest_Val
+ifelse(Ftest_Val > cv, "Reject Ho", "Fail to reject Ho")
+
+pvalue = pf(Ftest_Val, dfN, dfD, lower.tail = FALSE)
+
+#Conducting Scheffe Test
+
+F1_val = 2 * cv
+
+#For cereal and chocolate candy
+
+Fs1 = ((mean_cereals - mean_chocolate_candy) ^ 2) / (Sw * (1/5 + 1/5))
+
+ifelse(Fs1 > F1_val, "The decision is that mean1(cereal) is significantly different from mean2(chocolate candy)", "The decision is that mean1(cereal) is not significantly different from mean2(chocolate candy)")
+
+#For cereal and coffee
+
+Fs2 = ((mean_cereals - mean_coffee) ^ 2) / (Sw * (1/5 + 1/4))
+
+ifelse(Fs2 > F1_val, "The decision is that mean1(cereal) is significantly different from mean3(coffee)", "The decision is that mean1(cereal) is not significantly different from mean3(coffee)")
+
+#For chocolate candy and coffee
+
+Fs3 = ((mean_chocolate_candy - mean_coffee) ^ 2) / (Sw * (1/5 + 1/4))
+
+ifelse(Fs3 > F1_val, "The decision is that mean1(chocolate candy) is significantly different from mean3(coffee)", "The decision is that mean1(chocolate candy) is not significantly different from mean3(coffee)")
+
+```
+
+
+
+```{r Fourth Task Part Two}
+
+#Ho = all the means are equal
+#Ha = all means are not equal(i.e, At least one of the the means is different from other)
+
+eastern_third = c(4946, 5953, 6202, 7243, 6113)
+middle_third = c(6149, 7451, 6000, 6479)
+western_third = c(5282, 8605, 6528, 6911)
+
+mean_eastern_third = mean(eastern_third)
+mean_middle_third = mean(middle_third)
+mean_western_third = mean(western_third)
+
+var_eastern_third = var(eastern_third)
+var_middle_third = var(middle_third)
+var_western_third = var(western_third)
+
+alpha = 0.05
+dfN = 2
+dfD = 10
+
+cv = qf(0.95, dfN, dfD)
+
+#Finding the grand mean
+
+gmean = sum(eastern_third, middle_third, western_third)/13
+
+#Finding between the group variance
+
+Sb = ((5 * ((mean_eastern_third - gmean) ^ 2)) + (4 * ((mean_middle_third - gmean) ^ 2)) + (4 * ((mean_western_third - gmean) ^ 2))) / 2
+
+#Finding the within group variance 
+
+Sw = ((4 * var_eastern_third) + (3 * var_middle_third) + (3 * var_western_third)) / 10
+
+#Finding the F test value 
+
+Ftest_Val = Sb / Sw
+Ftest_Val
+ifelse(Ftest_Val > cv, "Reject Ho", "Fail to reject Ho")
+
+pvalue = pf(Ftest_Val, dfN, dfD, lower.tail = FALSE)
+
+#Conducting Scheffe Test
+
+F1_val = 2 * cv
+
+#For eastern third and middle third
+
+Fs1 = ((mean_eastern_third - mean_middle_third) ^ 2) / (Sw * (1/5 + 1/4))
+
+ifelse(Fs1 > F1_val, "The decision is that mean1(eastern third) is significantly different from mean2(middle third)", "The decision is that mean1(eastern third) is not significantly different from mean2(middle third)")
+
+#For eastern third and western third
+
+Fs2 = ((mean_eastern_third - mean_western_third) ^ 2) / (Sw * (1/5 + 1/4))
+
+ifelse(Fs2 > F1_val, "The decision is that mean1(eastern third) is significantly different from mean3(western third)", "The decision is that mean1(eastern third) is not significantly different from mean3(western third)")
+
+#For middle third and western third
+
+Fs3 = ((mean_middle_third - mean_western_third) ^ 2) / (Sw * (1/4 + 1/4))
+
+ifelse(Fs3 > F1_val, "The decision is that mean1(middle third) is significantly different from mean3(western third)", "The decision is that mean1(middle third) is not significantly different from mean3(western third)")
+
+```
+
+
+```{r Fifth Task Part One}
+
+plantA_light1 = c(9.2, 9.4, 8.9)
+plantA_light2 = c(8.5, 9.2, 8.9)
+plantB_light1 = c(7.1, 7.2, 8.5)
+plantB_light2 = c(5.5, 5.8, 7.6)
+
+#Significant value for the test
+alpha = 0.05
+
+#Creating a matrix to store the values so they can be used for the two way anova test
+plant_growth = matrix(c(rep("PlantA",3), rep("PlantA",3), rep("PlantB", 3), rep("PlantB", 3), rep("Growth1",3), rep("Growth2",3), rep("Growth1",3), rep("Growth2", 3), plantA_light1, plantA_light2, plantB_light1, plantB_light2),ncol = 3)
+
+plant_growth_df = as.data.frame(plant_growth)
+colnames(plant_growth_df) = c("Plant", "Growlight", "Values")
+
+#Calculating the two way anova test and then using the summary function to show their value. You need to multiple the plant * growlight here as to calculate the interaction value. 
+plant_growth_nova = aov(plant_growth_df$Values ~ plant_growth_df$Plant * plant_growth_df$Growlight)
+summary(plant_growth_nova)
+
+```
+
+
+```{r Fifth Task Part Two}
+
+#Importing the baseball data set
+baseball_DS = read_csv("DataSets/baseball.csv")
+
+#Perfoming EDA on the imported baseball data set
+str(baseball_DS)
+
+par(mfcol = c(1,2))
+
+plot(density(baseball_DS$RA),
+     main = "Density plot for RA",
+     ylab = "Frequency")
+
+boxplot(baseball_DS$RA,
+        main = "Boxplot for RA")
+
+par(mfcol = c(1,2))
+
+plot(density(baseball_DS$RS),
+     main = "Density plot for RS",
+     ylab = "Frequency")
+
+boxplot(baseball_DS$RS,
+        main = "Boxplot for RS")
+
+#Using dplyr, tidyverse and psych library.
+
+# Extract decade from year
+baseball_DS$Decade = baseball_DS$Year - (baseball_DS$Year %% 10)
+
+# Creating a wins table by summing the wins by decade
+wins = baseball_DS %>% 
+  group_by(Decade) %>% 
+  summarise(wins = sum(W)) %>% 
+  as.tibble()
+wins
+
+#Performing chi-square test
+alpha = 0.05
+observed = wins$wins
+expected = c(1/6, 1/6, 1/6, 1/6, 1/6, 1/6)
+
+result = chisq.test(x = observed, p = expected)
+result
+ifelse(result$p.value > alpha, "Fail to reject Ho", "Reject Ho")
+
+```
+
+
+```{r Fifth Task Part Three}
+
+#Importing the crop data set
+crop_data_DS = read_csv("DataSets/crop_data.csv")
+
+#H0: There is no effect of fertilizer or crop on the measure outcome.
+#H1: There is significant effect of fertilizer or corp on the measure outcome.
+
+alpha = 0.05
+crop_anova = aov(crop_data_DS$yield ~ crop_data_DS$fertilizer * crop_data_DS$density)
+
+summary_val = summary(crop_anova)
+summary_val
+pval_fer = summary_val[[1]][1, "Pr(>F)"]
+pval_density = summary_val[[1]][2, "Pr(>F)"]
+pval_interaction = summary_val[[1]][3, "Pr(>F)"]
+
+```
+

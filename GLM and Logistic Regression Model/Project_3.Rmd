@@ -1,0 +1,170 @@
+---
+title: ""
+output: html_document
+---
+
+```{r libraries, message=FALSE, warning=FALSE}
+
+#Libraries used 
+
+library(ISLR)
+library(ggplot2)
+library(dlookr)
+library(caret)
+library(DT)
+library(pROC)
+
+```
+
+
+```{r First Task}
+
+#Imported data set
+
+Proj3_DS = College
+
+#Performing Exploratory and basic descriptive analysis on the data set
+
+head(Proj3_DS)
+dlookr::describe(Proj3_DS)
+
+#Using plots to describe the data set. 
+boxplot(Proj3_DS$Grad.Rate,
+        col = "Blue",
+        xlab = "Graduation Rate of Students",
+        outcol = "#DE2B2B")
+
+plot(Proj3_DS$Apps ~ Proj3_DS$Accept,
+     col = c("Red", "Blue"),
+     ylab = "Number of Application Received",
+     xlab = "Number of Accepted applications")
+
+```
+
+
+```{r Second Task}
+
+#Splitting the data in train and test set using caret library and createDataPartition function. 
+
+set.seed(123)
+#The trainIndex object is storing the values which will have a 70/30 split.
+trainIndex = createDataPartition(Proj3_DS$Private, p = 0.7, list = FALSE)
+
+#The trainIndex is getting randomly split into train_DS with 70% and the remaining 30% random split is going in test_DS.
+train_DS = Proj3_DS[trainIndex,]
+test_DS = Proj3_DS[-trainIndex,]
+
+```
+
+
+```{r Third Task}
+
+#Using the glm() function to fit a logistic regression model to the training set using at least two predictors for train data.
+#To check for better model we look at the AIC value where the lowest AIC values means its a preferred model. 
+
+model = glm(train_DS$Private ~ train_DS$Enroll + train_DS$Accept, 
+            data = train_DS,
+            family = binomial(link = "logit"))
+
+summary(model)
+
+```
+
+Create a confusion matrix and report the results of your model for the train set. Interpret and discuss the confusion matrix. Which misclassifications are more damaging for the analysis, False Positives or False Negatives?
+
+```{r Fourth Task}
+
+#Train set prediction
+#Making prediction on the train data
+probabilities.train = predict(model, newdata = train_DS, type = "response")
+predicted.class.min = as.factor(ifelse(probabilities.train >= 0.5, "Yes", "No"))
+
+#Creating a confusionmatrix to compare the predicted values with the actual values.
+confusionMatrix(predicted.class.min, train_DS$Private, positive = "Yes")
+
+#Here our false positive is 64. False positive is where we predicted yes but the actual answer is no. 
+#Here our false negative is 20. False negative is where we predicted no but the actual answer is yes. 
+#True positive is 376 while True negative is 85.
+#The accuracy of this model is 0.8459. To make our model better we can change the probability value from 0.5 to maybe something less or decrease the sensitivity. 
+#Our prevalence value is 0.7266 which means in our model if we take 100 values it will predict 72 of them yes while the remaining 28 as no. 
+
+```
+
+Report and interpret metrics for Accuracy, Precision, Recall, and Specificity
+```{r Fifth Task}
+
+TP = 380
+TN = 81
+FP = 68
+FN = 16
+
+Accuracy = (TN + TP)/(TN + TP + FN + FP)
+Precision = TP/(FP + TP)
+Recall = TP/(TP + FN)
+Specificity = TN/(TN + FP)
+
+table_val = c(Accuracy, Precision, Recall, Specificity)
+df_val = as.data.frame(table_val)
+
+rownames(df_val) = c("Accuracy", "Precision", "Recall", "Specificity")
+colnames(df_val) = "Values"
+
+DT::datatable(df_val, class = 'cell-border stripe', caption = "Performance metric values for the train set") %>% 
+  formatRound("Values", 3) 
+
+```
+
+
+```{r Sixth Task}
+
+#Using the glm() function to fit a logistic regression model to the training set using at least two predictors for test data.
+model = glm(test_DS$Private ~ test_DS$Enroll + test_DS$Accept, 
+            data = test_DS,
+            family = binomial(link = "logit"))
+
+#Test set prediction
+#Making prediction on the test data
+probabilities.test = predict(model, newdata = test_DS, type = "response")
+predicted.class.min = as.factor(ifelse(probabilities.test >= 0.5, "Yes", "No"))
+
+#Creating a confusionmatrix to compare the predicted values with the actual values.
+confusionMatrix(predicted.class.min, test_DS$Private, positive = "Yes")
+
+#Here our false positive is 30. False positive is where we predicted yes but the actual answer is no. 
+#Here our false negative is 9. False negative is where we predicted no but the actual answer is yes. 
+#True positive is 160 while True negative is 33.
+#The accuracy of this model is 0.8534. To make our model better we can change the probability value from 0.5 to maybe something less or decrease the sensitivity. 
+#Our prevalence value is 0.7284 which means in our model if we take 100 values it will predict 73 of them yes while the remaining 27 as no. 
+
+```
+
+Plot and interpret the ROC curve. Please discuss what will happen to Precision and Recall if raising the classification threshold.
+```{r Seventh Task}
+
+#plot the Receiver operator characteristic curve using roc function. 
+ROC = roc(test_DS$Private, probabilities.test)
+#Using the par function to remove the padding from our ROC curve. We use pty which is the plot type to s which is the square to remove the padding. 
+par(pty = "s")
+plot(ROC,
+     col = "Purple",
+     ylab = "Sensitivity - TP Rate",
+     xlab = "Specificity - FP Rate",
+     lwd = 3)
+
+#Ideally we want the purple line to go straight to the top and then right horizontally. That is a model that is capable of perfect predictions but it never happens. But what we do not want is this purple line hugging the gray diagonal line. Because that will be the model that will make no correct predictions 
+#The diagonal line shows where the TP Rate is the same as the FP Rate.
+#So the ROC curve is a pretty good way to understand how your model is performing over specified thresholds. 
+
+```
+
+Calculate and interpret the AUC.
+```{r Eighth Task}
+
+#Another method we can use AUC or Area under the Curve. 
+#So it's the area under the ROC curve. 
+
+auc(ROC)
+
+#We can see the value we get is 0.9082 so it's the area under the purple line and between the gray horizontal line. 
+```
+

@@ -1,0 +1,452 @@
+---
+title: ""
+output: html_document
+---
+
+```{r libraries, message=FALSE, warning=FALSE}
+
+library(psych)
+library(readxl)
+library(tidyverse)
+library(dplyr)
+library(RColorBrewer)
+library(knitr)
+library(ggplot2)
+library(DT)
+library(corrplot)
+library(dlookr)
+library(car)
+library(leaps)
+
+```
+
+<P>
+<FONT SIZE=4, COLOR="#1C88D0">
+<B>INTRODUCTION</B>
+</FONT>
+<B><FONT SIZE=3, COLOR="#33C1B8"> 
+<BR> A little history about correlation and regression
+<B><FONT SIZE=3, COLOR="#413425"> 
+<BR>
+According to an analysis of Sir Francis Galton's and Karl Pearson's work, Galton's study on hereditary traits of sweet peas influenced the development of linear regression. Following Galton and Pearson's work, the more general methods of multiple regression and the product-moment correlation coefficient were developed. Before addressing prediction issues and the use of linear regression, most modern textbooks show and explain correlation. This study gives a short overview of how Galton developed and used linear regression to issues of heredity in the first place. Additional techniques that teachers might use to impart basic linear regression to students are shown in this history (Taylor & Francis., 2017). 
+<B><FONT SIZE=3, COLOR="#33C1B8"> 
+<BR> Multiple regression and it's application in different industries. </FONT> <BR>
+Multiple regression, also known as multiple linear regression, is a statistical technique that uses two or more explanatory variables to predict the outcome of a response variable. (Indeed., 2020) It can be used to analyze the relationship between a single dependent variable and several independent variables. The objective of multiple regression analysis is to use the independent variable whose values are known to predict the value of the single dependent value (Indeed Career Guide., 2020). 
+<BR>
+Multiple regression can be used in a variety of industries for instance, gaming industry. Imagine you're a game development company who is going to launch their game in the market in hopes that it will be a highly successful game. You believe you game will perform better in comparision to other game development firms which other game developers think as well. Multiple independent variables could affect the game's performance like level of difficulty, performance issue, release data, cost etc. Researchers can conduct a study to predict how a change in these variables will affect the game's whole performance. 
+<B><FONT SIZE=3, COLOR="#33C1B8"> 
+<BR> Hypothesis testing with respect to regression analysis and it's application in a industry. </FONT> <BR>
+Hypothesis tests are statistical procedures for putting a claim or assumption about a population's underlying distribution to the test using sample data. Following are the ways to do hypothesis testing in linear regression (Kumar A., 2022): <BR>
+Formulating the null and alternate hypotheses is the first phase in hypothesis testing. Based on that we get the H0 and Ha values which are used to conduct hypothesis testing. Then the linear regression formula values are calculated which gives the equation y = a + b1x1 + b2x2 + … (Depending on linear or multiple regression model). T test and F test values are then calculated by using their respective formula to get the values for linear or multiple regression. Then these test values are used to run the hypothesis test with a critical value which gives us information if we can reject the null hypothesis or we fail to reject the null hypothesis (Banerji A., 2022). <BR>
+For instance we can use hypothesis testing in gaming industry as well. Imagine you are a game developer who wants to create a game which is successful and which hold it's playerbase. You'll try to sell that game for maximum profits but multiple factors can affect that price range. These variables could be the game's performance, media coverage, not enough publicity, etc. We can build a prediction model for these independent variable to access the maximum sales you can achieve. We can then use hypothesis testing to find the correlation between these variable and then make changes based on the results we obtain. 
+
+<P>
+<FONT SIZE=4, COLOR="#1C88D0">
+<B>ANALYSIS SECTION</B>
+</FONT>
+
+<B><FONT SIZE = 3, COLOR = "#D09A1C">
+First task </B>
+<BR> 
+<FONT SIZE = 3, COLOR = "#D0401C">
+<B> Loading the data set. </B>
+<P> </FONT>
+
+```{r First Task}
+
+#The data set was imported and stored in a variable. 
+
+Proj1_DS = AmesHousing <- read_csv("AmesHousing.csv")
+
+```
+
+<B><FONT SIZE=3, COLOR="#413425">
+The data Ames Housing was imported and loaded in this task where it was stored under the object name Proj1_DS. This data set contains 82 fields(columns) for 2,930 properties values(rows) in Ames IA. 
+
+<B><FONT SIZE = 3, COLOR = "#D09A1C">
+Second task </B>
+<BR> 
+<FONT SIZE = 3, COLOR = "#D0401C">
+<B> Perform Exploratory and descriptive analysis on the provided data set. </B>
+<P> </FONT>
+
+```{r Second Task}
+
+#Performing Exploratory analysis on the provided data set. 
+
+head(Proj1_DS)
+
+# Basic descriptive statistics
+
+dlookr::describe(Proj1_DS)
+
+```
+
+<B><FONT SIZE=3, COLOR="#413425">
+The head function was used to collect the first six values of the complete data set for exploratory analysis to see how the Ames Housing data set looks. The full data set is next subjected to basic descriptive statistics. The describe function from the dlookr package was used for this since it only chooses and presents descriptive statistics for numerical values and ignores category variables. We can see that the values for some of the column fields are different in some of the observations, indicating that the data set includes missing values. Additionally, some of the skewness values are positive, indicating that the normal distribution graph is positively skewed because the mean is greater than the median, while some are negative, indicating that the mean is less than the median and thus the normal distribution graph will be negatively skewed.
+
+<B><FONT SIZE = 3, COLOR = "#D09A1C">
+Third task </B>
+<BR> 
+<FONT SIZE = 3, COLOR = "#D0401C">
+<B> Prepare data set by inputting missing values in the data set. </B>
+<P> </FONT>
+
+```{r Third Task}
+
+#Inputting missing values with means values of those columns. 
+
+Proj1_DS$`Lot Frontage`[is.na(Proj1_DS$`Lot Frontage`)] = mean(Proj1_DS$`Lot Frontage`, na.rm = TRUE)
+
+Proj1_DS$`Garage Cars`[is.na(Proj1_DS$`Garage Cars`)] = mean(Proj1_DS$`Garage Cars`, na.rm = TRUE)
+
+Proj1_DS$`Garage Area`[is.na(Proj1_DS$`Garage Area`)] = mean(Proj1_DS$`Garage Area`, na.rm = TRUE)
+
+Proj1_DS$`Bsmt Half Bath`[is.na(Proj1_DS$`Bsmt Half Bath`)] = mean(Proj1_DS$`Bsmt Half Bath`, na.rm = TRUE)
+
+Proj1_DS$`Bsmt Full Bath`[is.na(Proj1_DS$`Bsmt Full Bath`)] = mean(Proj1_DS$`Bsmt Full Bath`, na.rm = TRUE)
+
+Proj1_DS$`Total Bsmt SF`[is.na(Proj1_DS$`Total Bsmt SF`)] = mean(Proj1_DS$`Total Bsmt SF`, na.rm = TRUE)
+
+Proj1_DS$`Bsmt Unf SF`[is.na(Proj1_DS$`Bsmt Unf SF`)] = mean(Proj1_DS$`Bsmt Unf SF`, na.rm = TRUE)
+
+Proj1_DS$`BsmtFin SF 1`[is.na(Proj1_DS$`BsmtFin SF 1`)] = mean(Proj1_DS$`BsmtFin SF 1`, na.rm = TRUE)
+
+Proj1_DS$`BsmtFin SF 2`[is.na(Proj1_DS$`BsmtFin SF 2`)] = mean(Proj1_DS$`BsmtFin SF 2`, na.rm = TRUE)
+
+Proj1_DS$`Mas Vnr Area`[is.na(Proj1_DS$`Mas Vnr Area`)] = mean(Proj1_DS$`Mas Vnr Area`, na.rm = TRUE)
+
+#Or we can use the following code to update all the missing numeric value from the data set and store it in an object 
+
+#Separating integer values from the housing data set first 
+
+int_dataProj1_DS = Proj1_DS[, sapply(Proj1_DS, class) == 'integer']
+
+updated_Proj1_DS = int_dataProj1_DS %>% 
+  mutate_if(is.integer, function(n) ifelse(is.na(n), mean(n, na.rm = TRUE), n))
+
+```
+
+<B><FONT SIZE=3, COLOR="#413425">
+The str function was used to check for NA values in columns before selecting those columns to fill in missing values. The missing fields were replaced with mean values of those respective columns using the is.na function, allowing a thorough regression analysis to be performed on the given data set down the line. The same procedure was done again as the whole process was tedious. Here the integer values were stored in an object then mutate_if function was used on the data set to fill the missing values with mean values. 
+
+<B><FONT SIZE = 3, COLOR = "#D09A1C">
+Fourth task </B>
+<BR> 
+<FONT SIZE = 3, COLOR = "#D0401C">
+<B> Exhibit a correlation matrix for the missing values by using the cor function. </B>
+<P> </FONT>
+
+```{r Fourth Task}
+
+#Unlist function was used to remove the categorical values 
+b_val1= cor(Proj1_DS[, unlist(lapply(Proj1_DS, is.numeric))])
+b2_val1 = round(b_val1, 3)
+
+DT::datatable(b2_val1, class = 'cell-border stripe', caption = "Correlation coefficients value for the complete data set's numerical values.")
+
+```
+
+<B><FONT SIZE=3, COLOR="#413425">
+The category values were removed from the full data set using the unlist function, and a correlation matrix was generated using the remaining numerical data set using the cor functions on the unlisted numeric data. The correlation values were then presented with the help of the DT table library. We can see that the correlation values for the same columns, such as order - order or lot frontage - lot frontage, are 1, which is perfect correlation, as both values are the same.
+
+<B><FONT SIZE = 3, COLOR = "#D09A1C">
+Fifth task </B>
+<BR> 
+<FONT SIZE = 3, COLOR = "#D0401C">
+<B> Exhibit a plot of correlation matrix which was obtained in the previous task. </B>
+<P> </FONT>
+
+```{r Fifth Task}
+
+#corrplot library was used to plot the correlation matrix which was obtained in the previous task
+
+corrplot(b_val1,
+         type = 'upper',
+         col = brewer.pal(8, "Set3"))
+
+```
+
+<B><FONT SIZE=3, COLOR="#413425">
+The correlation matrix acquired in the previous task was shown using the corrplot package. We can see that various shades indicate different correlation ranges by looking at the correlation matrix plot. For example, pink and cyan show strong correlation ranges of 0.75 to 1 for positive and negative correlation, respectively.
+
+<B><FONT SIZE = 3, COLOR = "#D09A1C">
+Sixth task </B>
+<BR> 
+<FONT SIZE = 3, COLOR = "#D0401C">
+<B> Exhibit multiple scatterplot for highest and lowest correlation values with respect to dependent variable SalesPrice. Also, present a plot with for correlation value nearest to 0.5 with SalesPrice. </B>
+<P> </FONT>
+
+```{r Sixth Task}
+
+#Converting the correlation matrix value which we achieved in the previous task into a data frame so a scatterplot can be constructed. 
+
+a1 = as.data.frame(b_val1)
+
+#Calculating the regression line for each dependent and independent variable so when the scatterplot is created the abline function can be used to present the regression line on the scatterplot. 
+
+Reg_val1 = lm(a1$SalePrice ~ a1$`Overall Qual`)
+Reg_val2 = lm(a1$SalePrice ~ a1$`Enclosed Porch`)
+Reg_val3 = lm(a1$SalePrice ~ a1$`TotRms AbvGrd`)
+
+#First scatterplot for the highest correlation value with SalesPrice which was Overall Qual
+  
+plot(a1$SalePrice ~ a1$`Overall Qual`,
+     las = 1,
+     pch = 16,
+     col = "#9916B3",
+     ylab= "SalesPrice",
+     xlab= "Overall Qual",
+     main= "Scatter plot of SalesPrice vs Overall Qual")
+
+abline(Reg_val1,
+       col = "#DA2D66")
+
+#Second scatterplot for the lowest correlation value with SalesPrice which was Enclosed Porch
+
+plot(a1$SalePrice ~ a1$`Enclosed Porch`,
+     las = 1,
+     pch = 16,
+     col = "#9916B3",
+     ylab= "SalesPrice",
+     xlab= "Enclosed Porch",
+     main= "Scatter plot of SalesPrice vs Enclosed Porch")
+
+abline(Reg_val2,
+       col = "#DA2D66")
+
+#Last scatterplot for the correlation value nearest to 0.5 with SalesPrice which was TotRms AbvGrd
+
+plot(a1$SalePrice ~ a1$`TotRms AbvGrd`,
+     las = 1,
+     pch = 16,
+     col = "#9916B3",
+     ylab= "SalesPrice",
+     xlab= "TotRms AbvGrd",
+     main= "Scatter plot of SalesPrice vs TotRms AbvGrd")
+
+abline(Reg_val3,
+       col = "#DA2D66")
+
+```
+
+<B><FONT SIZE=3, COLOR="#413425">
+In this task, the plot function was used to create a scatterplot for dependent and independent data. The regression line was calculated using the lm function, and the regression line on the scatterplot was created using the abline function. By examining the first scatterplot, we can see that it is a strong positively correlative scatterplot, since most of the values are close to the regression line, implying that the residual difference will be minimal. The second scatterplot is negative, but it lacks a significant negative association since the residual difference for some values is enormous. When compared to the first scatterplot, the last scatterplot has a positive correlation but not a strong positive correlation because most of the values are not near the regression line, resulting in a large residual difference and thus the correlation value, though positive, will be closer to 0 than to 1.
+
+<B><FONT SIZE = 3, COLOR = "#D09A1C">
+Seventh task </B>
+<BR> 
+<FONT SIZE = 3, COLOR = "#D0401C">
+<B> Using three continuous variable of your choice fit the regression model. </B>
+<P> </FONT>
+
+```{r Seventh Task}
+
+#Multiple regression function was used to calculate the value for 3 continuous variable which was mentioned with the provided data set. 
+
+multireg = lm(Proj1_DS$SalePrice ~ Proj1_DS$`BsmtFin SF 2` + Proj1_DS$`Total Bsmt SF` + Proj1_DS$`Bsmt Unf SF`)
+
+summary_reg = summary(multireg)
+summary_reg
+
+```
+
+<B><FONT SIZE=3, COLOR="#413425">
+The continuous variables BsmtFin SF2, Total Bsmt SF, BsmtUnf SF were used as independent variable while SalesPrice was used as the dependent variable. The multiple regression value for the above variables were calculated using the lm function then summary function was used to present them. By looking at the summary table we can notice that the muliple R-squared value came out to be 0.4133 or 41.33% of the changes in x(independent) can be explained by variation in y(dependent). 
+
+<B><FONT SIZE = 3, COLOR = "#D09A1C">
+Eighth task </B>
+<BR> 
+<FONT SIZE = 3, COLOR = "#D0401C">
+<B> Present the model which was calculated in the previous task in equation form. Also, present the correlation coefficient for each model. </B>
+<P> </FONT>
+
+```{r Eighth Task}
+
+#Coefficient values were pulled from multiple regression which was created in the previous task using the summary function. 
+
+aval = summary_reg$coefficients[1]
+b1val = summary_reg$coefficients[2]
+b2val = summary_reg$coefficients[3]
+b3val = summary_reg$coefficients[4]
+
+#Multiple regression formula representation. 
+
+print(paste("Multiple regression formula, y =", round(aval, 3), "+", round(b1val, 3), "x1", "+", round(b2val, 3), "x2", "+", round(b3val, 3), "x3"))
+
+#Correlation and determination values for each of the dependent and independent values. 
+
+cor_val1 = cor(Proj1_DS$SalePrice, Proj1_DS$`BsmtFin SF 2`)
+cor_val2 = cor(Proj1_DS$SalePrice, Proj1_DS$`Total Bsmt SF`)
+cor_val3 = cor(Proj1_DS$SalePrice, Proj1_DS$`Bsmt Unf SF`)
+
+deter_val1 = cor_val1 ^ 2 
+deter_val2 = cor_val2 ^ 2 
+deter_val3 = cor_val3 ^ 2 
+
+table_cor_deter = c(cor_val1, cor_val2, cor_val3, deter_val1, deter_val2, deter_val3)
+matrix_cor_deter = matrix(table_cor_deter, ncol = 2, byrow = FALSE)
+
+rownames(matrix_cor_deter) = c("SalesPrice & BsmtFin SF 2", "SalesPrice & Total Bsmt SF", "SalesPrice & Bsmt Unf SF")
+colnames(matrix_cor_deter) = c("Correlation Coefficient", "Determination Coefficient")
+
+DT::datatable(matrix_cor_deter, class = 'cell-border stripe', caption = "Correlation & Determination Coefficient values for the patient data set") %>% 
+  formatRound("Correlation Coefficient", 3) %>% 
+  formatRound("Determination Coefficient", 3)
+
+```
+
+<B><FONT SIZE=3, COLOR="#413425">
+The intercept and coefficient values were taken from the multiple regression model summary that was created in the previous job. Then, using the formula y = a + b1x1+ b2x2 + b3x3, where a is the intercept value and b1, b2, and b3 are the coefficient values, these data were expressed in a multiple regression model. Then, using a DT library table, the correlation coefficient and determination for each of the values with the SalesPrice were computed and reported. By analyzing the table we can notice that the correlation coefficient for SalesPrice & BsmtFin SF 2 is very very low 0.006 which means that they have no correlation among themselves while for SalesPrice & Total Bsmt SF it's 0.632 which a positive correlation. 
+
+<B><FONT SIZE = 3, COLOR = "#D09A1C">
+Ninth task </B>
+<BR> 
+<FONT SIZE = 3, COLOR = "#D0401C">
+<B> Exhibit all the four graphs by using the plot function on your multiple regression model. </B>
+<P> </FONT>
+
+```{r Ninth Task}
+
+#Par mfrow function was used to present all the four graphs on the same page which will be obtained by using the plot function.
+
+par(mfrow = c(2,2))
+
+#Plot function to get the four graphs 
+
+plot(multireg)
+
+```
+
+<B><FONT SIZE=3, COLOR="#413425">
+The par function was used to exhibit the four graphs (Residual vs Filled, Normal Q - Q, Scale Location, and Residual vs Leverage) on a single page. When we look at these graphs, we can see how the outliers' positions change depending on the graph type.
+
+<B><FONT SIZE = 3, COLOR = "#D09A1C">
+Tenth task </B>
+<BR> 
+<FONT SIZE = 3, COLOR = "#D0401C">
+<B> Perform a check for multicollinearity for the multiple regression model you created in the previous task. </B>
+<P> </FONT>
+
+```{r Tenth Task}
+
+#Checking for multicollinearity using the vif function
+
+vif(multireg)
+
+```
+
+<B><FONT SIZE=3, COLOR="#413425">
+The vif function was used to check for multicollinearity of the selected multiple regression model. Multicollinearity is a high correlation among the predictors essentially where you can use one predictor to predict another predictor. It's not good to have Multicollinearity in the model as it will inflate and destabilize the regression coefficients(It makes them harder to trust). Anything less than 5 is not of concern. Anything 10 or greater means that we have high level of multicollinearity. In our case all the values are below 2 so we are safe and it means that we have no multicollinearity. But if multicollinearity existed we would have remove some of the highly correlated independent variables. 
+
+<B><FONT SIZE = 3, COLOR = "#D09A1C">
+Eleventh task </B>
+<BR> 
+<FONT SIZE = 3, COLOR = "#D0401C">
+<B> Perform a check for outliers on the multiple regression model that you created in the previous task.  </B>
+<P> </FONT>
+
+```{r Eleventh Task}
+
+#Using boxplot$out function and storing the outliers in an object for each of the independent and dependent variable that were choosen in the multiple regression model. 
+
+Outlier_val1 = boxplot(Proj1_DS$`BsmtFin SF 2`,
+                 main = "Boxplot of BsmtFin SF 2",
+                 range = 3,
+                 outcol = "#DE2B2B",
+                 col = "#0D0404")$out
+
+Outlier_val2 = boxplot(Proj1_DS$`Total Bsmt SF`,
+                 main = "Boxplot of Total Bsmt SF",
+                 range = 3,
+                 outcol = "#DE2B2B",
+                 col = "#0D0404")$out
+
+Outlier_val3 = boxplot(Proj1_DS$`Bsmt Unf SF`,
+                 main = "Boxplot of Bsmt Unf SF",
+                 range = 3,
+                 outcol = "#DE2B2B",
+                 col = "#0D0404")$out
+
+Outlier_val4 = boxplot(Proj1_DS$SalePrice,
+                 main = "Boxplot of SalePrice",
+                 range = 3,
+                 outcol = "#DE2B2B",
+                 col = "#0D0404")$out
+
+```
+
+<B><FONT SIZE=3, COLOR="#413425">
+The calculated values were saved in their appropriate objects using the boxplot$out function for each of the independent and dependent variables that were chosen in the multiple regression model. If eliminating these outliers improves the correlation of determination/correlation, we should do so and see if the removal results in a high determination value.
+
+<B><FONT SIZE = 3, COLOR = "#D09A1C">
+Twelfth task </B>
+<BR> 
+<FONT SIZE = 3, COLOR = "#D0401C">
+<B> Perform a task to remove the outliers which were calculated in the previous task. </B>
+<P> </FONT>
+
+```{r Twelfth Task}
+
+#The outliers were removed from the multiple regression dependent and independent variables. Outliers were removed from data set then that object(No_outlier_val1) is used in second line of code to remove outliers on second independent variable. Therefore No_outlier_val2 = No_outlier_val1 and not Proj1_DS as we will only be removing outliers from Proj1_DS if we put it there but are removing outliers completely from the entire data set for our multiple regression model. 
+
+No_outlier_val1 = Proj1_DS[-which(Proj1_DS$`BsmtFin SF 2` %in% Outlier_val1),]
+No_outlier_val2 = No_outlier_val1[-which(Proj1_DS$`Total Bsmt SF` %in% Outlier_val2),]
+No_outlier_val3 = No_outlier_val2[-which(Proj1_DS$`Bsmt Unf SF` %in% Outlier_val3),]
+No_outlier_val4 = No_outlier_val3[-which(Proj1_DS$SalePrice %in% Outlier_val4),]
+
+```
+
+<B><FONT SIZE=3, COLOR="#413425">
+Outliers were eliminated from the multiple regression dependent and independent variables established in the previous task, and new values were placed in the object without outliers.
+
+<B><FONT SIZE = 3, COLOR = "#D09A1C">
+Thirteen task </B>
+<BR> 
+<FONT SIZE = 3, COLOR = "#D0401C">
+<B> Perform a subset regression method to identify the best model. </B>
+<P> </FONT>
+
+```{r Thirteen Task}
+
+#regsubset function which is from the leaps library was used to identify the best model. 
+
+subset_dataset = regsubsets(Proj1_DS$SalePrice ~ Proj1_DS$`BsmtFin SF 2` + Proj1_DS$`Total Bsmt SF` + Proj1_DS$`Bsmt Unf SF`, data = Proj1_DS, nbest = 4)
+
+#summary function was used on the subset to get the best predictor model.  
+
+summary(subset_dataset)
+
+```
+
+<B><FONT SIZE=3, COLOR="#413425">
+The regsubsets function from the leaps library was used and then summary function was used on that to get the best predictor model values. Here, the best 1 predictor model is Total Bsmt SF, the best 2 predictor model is Total Bsmt SF and Bsmt Unf SF. 
+
+<B><FONT SIZE = 3, COLOR = "#D09A1C">
+Fourteen task </B>
+<BR> 
+<FONT SIZE = 3, COLOR = "#D0401C">
+<B> Comparing the model equation between the multiple regression and subset of that multiple regression. </B>
+<P> </FONT>
+<B><FONT SIZE=3, COLOR="#413425">
+We received 41.33 percent as our multiple R - Squared value when we ran the summary function on the multiple regression data, which demonstrates correlation but isn't strong enough because our data contained a lot of outliers. However, when we exclude a section of that data, we can see that we have predictor values for each. For example, in our multiple regression dataset, the best one predictor value model is Total Bsmt SF. As a result, I favor the two model since it gives us the best one predictor value as well as the best two and three predictor model values. There are no outliers in this model, which improves the correlation in our multiple regression model.
+
+<P>
+<FONT SIZE=4, COLOR="#1C88D0">
+<B>CONCLUSION</B>
+</FONT>
+<B><FONT SIZE=3, COLOR="#413425"> 
+<BR>
+Finally, I had a better understanding of the multiple regression model. I learnt how to update your data collection and fill in missing numbers using mean, median, and other statistics. I learnt about correlation matrices and the corrplot package, which was used to generate the matrices. Aside from that, I learnt how to use the plot function to create four distinct graphs and how to manipulate them. I also learnt how to use the vif function and handle outliers. Not only do you need to cope with them, but you also need to know how to get rid of them from your data collection. I also learnt about the leaps library and how to use the regsubset function to work with subsets.
+
+<P>
+<FONT SIZE=4, COLOR="#1C88D0">
+<B>BIBLIOGRAPHY</B>
+</FONT>
+<B><FONT SIZE=3, COLOR="#413425"> 
+<BR>
+1) Galton, Pearson, and the Peas: A Brief History of Linear Regression for Statistics Instructors. (2017). Taylor & Francis. https://www.tandfonline.com/doi/full/10.1080/10691898.2001.11910537 <BR>
+2) Multiple Regression: Definition, Uses and 5 Examples. (2020). Indeed Career Guide. https://www.indeed.com/career-advice/career-development/multiple-regression <BR>
+3) Kumar, A. (2022, February 20). Linear regression hypothesis testing: Concepts, Examples. Data Analytics. https://vitalflux.com/linear-regression-hypothesis-testing-examples/ <BR>
+4) Banerji, A. (2022, January 6). Hypothesis Testing On Linear Regression - Nerd For Tech. Medium. https://medium.com/nerd-for-tech/hypothesis-testing-on-linear-regression-c2a1799ba964 <BR>
+

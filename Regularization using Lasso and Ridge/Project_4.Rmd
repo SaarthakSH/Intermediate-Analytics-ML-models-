@@ -1,0 +1,271 @@
+---
+title: ""
+output: html_document
+---
+
+```{r libraries, message=FALSE, warning=FALSE}
+
+#Libraries used 
+
+library(ISLR)
+library(ggplot2)
+library(dlookr)
+library(caret)
+library(DT)
+library(pROC)
+library(glmnet)
+library(Metrics)
+library(car)
+library(MASS)
+
+```
+
+
+```{r First Task}
+
+#Loading the data set.
+Proj4_DS = College
+
+#Splitting the loaded data set into train and test data set. 
+#If we don't set this seed at a constant number(can be whatever) then every time we try to create our random train and test data set we will get different results. 
+set.seed(420)
+
+#If we run the trainIndex we will see that all it has is a list of indexes that represents 70% of the total data set(random)
+trainIndex = createDataPartition(Proj4_DS$Private, p = 0.7, list = FALSE)
+
+#Now we are creating the train data set where it means that - take the data set and only give me the values/rows in the trainIndex data set.(Which is 70% of the random values.)
+train_DS = Proj4_DS[trainIndex,]
+#Now we are creating the test data set where it means that - take the data set and only give me the values/rows which are not in the trainIndex data set.(Which is the remaining 30% of the random values.)
+test_DS = Proj4_DS[-trainIndex,]
+
+#Before we use the glmnet function we have to convert the data frame to matrix as it only works on matrices. 
+#We are using the model.matrix function which is more advanced than a normal matrix function. Let's say we have a categorical variable, the model.matrix function will convert those values in 0s and 1s(This is known as dummy coding). 
+#The ,-1 is because we are gonna use Apps as the response variable.  
+train_x = model.matrix(Apps ~., train_DS)[,-1]
+test_x = model.matrix(Apps ~., test_DS)[,-1]
+
+#Assigning the response value(Apps) for the y axis as it will be used in the glmnet function. 
+train_y = train_DS$Apps
+test_y = test_DS$Apps
+
+#Using the str function to present the values of the train and test data set. 
+str(train_x)
+str(test_x)
+
+```
+
+
+```{r Second Task}
+
+#The first thing we do is find the best value of lamda. 
+#Because the cv.glmnet () function uses a randomization within it we have to set the seed value so we can produce the same results. 
+set.seed(420)
+
+#cv here is the cross validation. So, this function will use cross validation to test various values of lambda and determine which value is optimial. 
+#nfolds here defines the number of folds that will be used in the cross validation. So in another words we are gonna split the data set into 10 folds, we are gonna use 9 for the training and 1 for the whole offset that we are gonna use to test against. Then, we gonna shuffle everything again and use 9 for the training and 1 for the whole offset. And we are gonna keep repeating that until all slices are used as a both training and test set within the cross validation process. nfolds is 10 by default. 
+#alpha is used for Ridge Regression model. 0 = Ridge Regression
+cv.ridge = cv.glmnet(train_x, train_y, alpha = 0, nflods = 10)
+
+#So we want to validate that these above lines represent the minimum and 1 standard error, we can simple look at them here. 
+log(cv.ridge$lambda.min)
+log(cv.ridge$lambda.1se)
+
+print(paste("The lambda.min =", round(log(cv.ridge$lambda.min), 5), " & the lambda.1st =", round(log(cv.ridge$lambda.1se), 5)))
+
+```
+
+
+```{r Third Task}
+
+#The mean squared error is on the y axis, the log of lambda is on the x axis, and the non-zero coefficients are across the top (or the number of non-zero coefficients in the model for that particular value of lambda). These red dots now represent the error estimations. These two vertical dotted lines represent the plot's most important features. The minimal value of lambda is shown by the first line (left). As can be seen, the predictor model maintains roughly 17 variables. The second dotted line indicates lamda.1se, which is the largest/maximum value within one standard error of the lambda minimum. There are 17 non-zero coefficients in this model. As a result, just 17 variables remain. As a result, this is the simplest model (2nd) that performs almost as well as the best model (1st one).
+plot(cv.ridge)
+
+```
+
+
+```{r Fourth Task}
+
+#We that we have got our values for the minimum and 1se we can use them fit our models and for that we will use the glmnet function. 
+
+#For Ridge model(L2) we will put alpha = 0. 
+model.minr = glmnet(train_x, train_y, alpha = 0, lambda = cv.ridge$lambda.min)
+
+#After fitting the model we look at the regression coefficients 
+print(paste("The regression coefficients for minimum value of lambda"))
+coef(model.minr)
+
+#Now we are gonna do the same steps for the 1se model cause we want to compare it with our min model. 
+model.1ser = glmnet(train_x, train_y, alpha = 0, lambda = cv.ridge$lambda.1se)
+
+#After fitting the model we look at the regression coefficients 
+print(paste("The regression coefficients for 1se value of lambda"))
+coef(model.1ser)
+
+```
+
+
+```{r Fifth Task}
+
+#Viewing RMSE of the full model or ols first so we can compare them to our test and train models. 
+#Before can get the RMSE value we have to create our ols model with no regularlization. 
+ols = lm(Apps ~ ., data = train_DS)
+
+#Now we will use this ols to get the RMSE value so we can check for Over fitting with our training and test data set. 
+preds.ols = predict(ols, new = test_DS)
+ols.rmse = rmse(test_DS$Apps, preds.ols)
+
+#Train set prediction. 
+#Now we are calculating the RMSE value of the training data set. 
+preds.train = predict(model.1ser, newx = train_x)
+train.rmse = rmse(train_y, preds.train)
+
+#Presenting the RMSE values for ols and training data set. 
+table_train1 = c(ols.rmse, train.rmse)
+df_train1 = as.data.frame(table_train1)
+
+rownames(df_train1) = c("Ols/full model RMSE value", "Training set RMSE value")
+colnames(df_train1) = "Values"
+
+DT::datatable(df_train1, class = 'cell-border stripe', caption = "RMSE Values") %>% 
+  formatRound("Values", 3) 
+
+```
+
+
+```{r Sixth Task}
+
+#Test set prediction. 
+#Now we are calculating the RMSE value of the testing data set. 
+preds.test = predict(model.1ser, newx = test_x)
+test.rmse = rmse(test_y, preds.test)
+
+#Since the RMSE value of the ridge predictions test set is lower than the training set, the model is badly over fitting the data. The RMSE value difference should be around 0.2 or 0.5 anything over that is over fitting. If we compare it with the overall data set we can see that our overall is 1086 while our test is 1331 which is a huge difference therefore there is too much over fitting of the data. 
+
+#Presenting the RMSE values for ols and test data set. 
+table_test1 = c(ols.rmse, test.rmse)
+df_test1 = as.data.frame(table_test1)
+
+rownames(df_test1) = c("Ols/full model RMSE value", "Test set RMSE value")
+colnames(df_test1) = "Values"
+
+DT::datatable(df_test1, class = 'cell-border stripe', caption = "RMSE Values") %>% 
+  formatRound("Values", 3) 
+
+```
+
+
+```{r Seventh Task}
+
+#The first thing we do is find the best value of lamda. 
+#Because the cv.glmnet () function uses a randomization within it we have to set the seed value so we can produce the same results. 
+set.seed(420)
+
+#cv here is the cross validation. So, this function will use cross validation to test various values of lambda and determine which value is optimial. 
+#nfolds here defines the number of folds that will be used in the cross validation. So in another words we are gonna split the data set into 10 folds, we are gonna use 9 for the training and 1 for the whole offset that we are gonna use to test against. Then, we gonna shuffle everything again and use 9 for the training and 1 for the whole offset. And we are gonna keep repeating that until all slices are used as a both training and test set within the cross validation process. nfolds is 10 by default. 
+#alpha is used for LASSO Regression model. 1 = Lasso Regression. By default it's 0. 
+cv.lasso = cv.glmnet(train_x, train_y, alpha = 1, nflods = 10)
+
+#So we want to validate that these above lines represent the minimum and 1 standard error, we can simple look at them here. 
+log(cv.lasso$lambda.min)
+log(cv.lasso$lambda.1se)
+
+print(paste("The lambda.min =", round(log(cv.lasso$lambda.min), 5), " & the lambda.1st =", round(log(cv.lasso$lambda.1se), 5)))
+
+```
+
+
+```{r Eighth Task}
+
+#Here the y axis is the mean squared error, the x axis is the log of lamda and across the top we have the non zero coefficients(or the number of non zero coefficients in the model for that particular value of lamda). Now, these red dots are the error estimates.
+#The main significance of this plot are these two vertical dotted lines. The first line(left) represents the minimum value of lamda. Which we can see retains about 12 variables within the predictor model. 
+#The second dotted line represents lamda.1se which is the maximum/largest value within 1 standard error of the lamda minimum. Here in this model has 2 non zero coefficents. So it retains only 2 variables and setting the coefficients for the rest of the variables as 0. 
+#So what this means is this is the simplest model(2nd one) which performs almost as well as the best model(1st one). 
+plot(cv.lasso)
+
+```
+
+
+```{r Ninth Task}
+
+#We that we have got our values for the minimum and 1se we can use them fit our models and for that we will use the glmnet function. 
+
+#For Lasso model(L1) we will put alpha = 1. 
+model.min = glmnet(train_x, train_y, alpha = 1, lambda = cv.lasso$lambda.min)
+
+#After fitting the model we look at the regression coefficients 
+print(paste("The regression coefficients for minimum value of lambda"))
+coef(model.min)
+
+#Now we are gonna do the same steps for the 1se model cause we want to compare it with our min model. 
+model.1se = glmnet(train_x, train_y, alpha = 1, lambda = cv.lasso$lambda.1se)
+
+#After fitting the model we look at the regression coefficients 
+print(paste("The regression coefficients for 1se value of lambda"))
+coef(model.1se)
+
+```
+
+
+```{r Tenth Task}
+
+#Viewing RMSE of the full model or ols first so we can compare them to our test and train models. 
+#Before can get the RMSE value we have to create our ols model with no regularlization. 
+ols = lm(Apps ~ ., data = train_DS)
+
+#Now we will use this ols to get the RMSE value so we can check for Over fitting with our training and test data set. 
+preds.ols = predict(ols, new = test_DS)
+ols.rmse = rmse(test_DS$Apps, preds.ols)
+
+#Train set prediction. 
+#Now we are calculating the RMSE value of the training data set. 
+preds.train = predict(model.1se, newx = train_x)
+train.rmse = rmse(train_y, preds.train)
+
+#Presenting the RMSE values for ols and training data set. 
+table_train1 = c(ols.rmse, train.rmse)
+df_train1 = as.data.frame(table_train1)
+
+rownames(df_train1) = c("Ols/full model RMSE value", "Training set RMSE value")
+colnames(df_train1) = "Values"
+
+DT::datatable(df_train1, class = 'cell-border stripe', caption = "RMSE Values") %>% 
+  formatRound("Values", 3) 
+
+```
+
+
+```{r Eleventh Task}
+
+#Test set prediction. 
+#Now we are calculating the RMSE value of the testing data set. 
+preds.test = predict(model.1se, newx = test_x)
+test.rmse = rmse(test_y, preds.test)
+
+#Since the RMSE value of the lasso predictions test set is higher than the training set, the model is badly over fitting the data. The RMSE value difference should be around 0.2 or 0.5 anything over that is over fitting. If we compare it with the overall data set we can see that our overall is 1086 while our test is 1304 which is a huge difference therefore there is too much over fitting of the data. 
+
+#Presenting the RMSE values for ols and test data set. 
+table_test1 = c(ols.rmse, test.rmse)
+df_test1 = as.data.frame(table_test1)
+
+rownames(df_test1) = c("Ols/full model RMSE value", "Test set RMSE value")
+colnames(df_test1) = "Values"
+
+DT::datatable(df_test1, class = 'cell-border stripe', caption = "RMSE Values") %>% 
+  formatRound("Values", 3) 
+
+```
+
+
+```{r Thirteen Task}
+
+#The step wise technique begins with no variables in the model and gradually adds them one by one while testing for improvement. It also checks for any previously introduced variables that are no longer needed in the model and eliminates them at each phase. The issues with step wise model selection are more well understood and significantly worse than those with LASSO. LASSO is superior for selecting features or sparse models. Ridge regression, which utilizes all variables, may provide superior predictions.
+model = lm(Apps ~ ., data = Proj4_DS)
+stepwise_model = stepAIC(model, direction = "both")
+
+summary(stepwise_model)
+step_rms = sqrt(mean(stepwise_model$residuals^2))
+
+print(paste("The stepwise selection method =", step_rms))
+
+```
+
